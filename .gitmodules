@@ -1,0 +1,6 @@
+[submodule "kc1fsz-tools-cpp"]
+	path = kc1fsz-tools-cpp
+	url = https://github.com/brucemack/kc1fsz-tools-cpp.git
+[submodule "amp-core"]
+	path = amp-core
+	url = https://github.com/Ampersand-ASL/amp-core.git
