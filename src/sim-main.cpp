@@ -74,12 +74,14 @@ int main(int argc, const char** argv) {
 
     VoterClient client0(log, clock, 1, router);
 
-    // Determine the address family, defaulting to IPv4
-    short addrFamily = getenv("AMP_VOTER_PROTO") != 0 && 
-        strcmp(getenv("AMP_VOTER_PROTO"), "IPV6") == 0 ? AF_INET6 : AF_INET;
     // Open up the IAX2 network connection
-    client0.open(addrFamily, atoi(getenv("AMP_VOTER_PORT")));
-    client0.setPassword(getenv("AMP_VOTER_CLIENT_PASSWORD"));
+    client0.setClientPassword(getenv("AMP_VOTER_CLIENT_PASSWORD"));
+    client0.setServerPassword(getenv("AMP_VOTER_SERVER_PASSWORD"));
+    int rc = client0.open(getenv("AMP_VOTER_SERVER_ADDR"));
+    if (rc != 0) {
+        log.error("Failed to open connection");
+        std::exit(-1);
+    }
 
     // Setup a timer that takes the poke address generated from the service
     // thread and puts it into the IAX line.

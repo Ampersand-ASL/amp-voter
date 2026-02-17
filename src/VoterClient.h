@@ -46,15 +46,15 @@ public:
      *  
      * NOTE: At the moment listening happens on all local interfaces.
      *
-     * @param listenFamily - Either AF_INET or AF_INET6
-     * @param listenPort
      * @returns 0 if the open was successful.
      */
-    int open(short addrFamily, int listenPort);
+    int open(const char* serverAddrAndPort);
 
     void close();
     
-    void setPassword(const char* p);
+    void setClientPassword(const char* p);
+
+    void setServerPassword(const char* p);
 
     void setTrace(bool a) { _trace = a; }
 
@@ -65,6 +65,7 @@ public:
     // ----- Runnable -------------------------------------------------------
 
     virtual bool run2();  
+    virtual void audioRateTick(uint32_t tickTimeMs);
     virtual void oneSecTick();
     virtual void tenSecTick();
 
@@ -79,6 +80,8 @@ private:
     bool _processInboundData();
     void _processReceivedPacket(const uint8_t* buf, unsigned bufLen, 
         const sockaddr& peerAddr, uint32_t stampMs);
+    void _sendPacketToPeer(const uint8_t* b, unsigned len, 
+        const sockaddr& peerAddr);
 
     Log& _log;
     Clock& _clock;
@@ -93,6 +96,7 @@ private:
     int _sockFd = 0;
     // Enables detailed network tracing
     bool _trace = false;
+    sockaddr_storage _serverAddr;
 
     amp::VoterPeer _client;
 };

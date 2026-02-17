@@ -37,43 +37,45 @@
 #include "MessageConsumer.h"
 #include "Message.h"
 
+#include "VoterPeer.h"
+#include "VoterUtil.h"
 #include "VoterClient.h"
 
 using namespace std;
 
-static unsigned AUDIO_TICK_MS = 20;
-
 namespace kc1fsz {
 
+/*    
 static uint32_t alignToTick(uint32_t ts, uint32_t tick) {
     return (ts / tick) * tick;
 }
+*/
 
 VoterClient::VoterClient(Log& log, Clock& clock, int lineId,
     MessageConsumer& bus)
 :   _log(log),
     _clock(clock),
     _lineId(lineId),
-    _bus(bus) {
+    _bus(bus),
+    _client(true) {
 
     _client.init(&clock, &log);
+    // Make the connection so we can send packets out to the client
+    _client.setSink([this]
+        (const sockaddr& addr, const uint8_t* data, unsigned dataLen) {
+            _sendPacketToPeer(data, dataLen, addr);
+        }
+    );
 }
 
-int VoterClient::open(short addrFamily, int listenPort) {
-
-    // If the configuration is changing then ignore the request
-    if (addrFamily == _addrFamily &&
-        _listenPort == listenPort &&
-        _sockFd != 0) {
-        return 0;
-    }
+int VoterClient::open(const char* serverAddrAndPort) {
 
     close();
 
-    _addrFamily = addrFamily;
-    _listenPort = listenPort;
-
-    _log.info("Listening on Voter port %d", _listenPort);
+    // Parse the server address and determine IPv4 vs IPv6
+    if (parseIPAddrAndPort(serverAddrAndPort, _serverAddr) != 0)
+        return -1;
+    _addrFamily = _serverAddr.ss_family;
 
     // UDP open/bind
     int sockFd = socket(_addrFamily, SOCK_DGRAM, 0);
@@ -93,6 +95,7 @@ int VoterClient::open(short addrFamily, int listenPort) {
         return -1;
     }
 
+    /*
     struct sockaddr_storage servaddr;
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.ss_family = _addrFamily;
@@ -117,6 +120,7 @@ int VoterClient::open(short addrFamily, int listenPort) {
         ::close(sockFd);
         return -1;
     }
+    */
 
     if (makeNonBlocking(sockFd) != 0) {
         _log.error("open fcntl failed (%d)", errno);
@@ -126,9 +130,9 @@ int VoterClient::open(short addrFamily, int listenPort) {
 
     _sockFd = sockFd;
 
-    //server0.setLocalPassword(serverPwd.c_str());
-    //server0.setLocalChallenge(serverChallenge.c_str());
-    //server0.setRemotePassword(client0Pwd.c_str());
+    _client.setPeerAddr(_serverAddr);
+
+    _log.info("Opened connection to %s", serverAddrAndPort);
 
     return 0;
 }
@@ -141,7 +145,13 @@ void VoterClient::close() {
     _addrFamily = 0;
 } 
 
-void VoterClient::setPassword(const char* p) {
+void VoterClient::setServerPassword(const char* p) {
+    _client.setRemotePassword(p);
+}
+
+void VoterClient::setClientPassword(const char* p) {
+    // A random challenge for security 
+    _client.setLocalChallenge(amp::VoterPeer::makeChallenge().c_str());
     _client.setLocalPassword(p);
 }
 
@@ -152,10 +162,16 @@ bool VoterClient::run2() {
     return _processInboundData();
 }
 
-void VoterClient::oneSecTick() {    
+void VoterClient::audioRateTick(uint32_t ms) {
+    _client.audioRateTick(ms);
+}
+
+void VoterClient::oneSecTick() {
+    _client.oneSecTick();    
 }
 
 void VoterClient::tenSecTick() {
+    _client.tenSecTick();    
 }
 
 int VoterClient::getPolls(pollfd* fds, unsigned fdsCapacity) {
@@ -201,8 +217,31 @@ bool VoterClient::_processInboundData() {
 }
 
 void VoterClient::_processReceivedPacket(
-    const uint8_t* potentiallyDangerousBuf, unsigned bufLen,
+    const uint8_t* packet, unsigned packetLen,
     const sockaddr& peerAddr, uint32_t rxStampMs) {
+    _client.consumePacket(peerAddr, packet, packetLen);
 }
+
+void VoterClient::_sendPacketToPeer(const uint8_t* b, unsigned len, 
+    const sockaddr& peerAddr) {
+
+    _log.infoDump("Sending packet", b, len);
+
+    if (!_sockFd)
+        return;
+
+    int rc = ::sendto(_sockFd, 
+        b,
+        len, 0, &peerAddr, getIPAddrSize(peerAddr));
+    if (rc < 0) {
+        if (errno == 101) {
+            char temp[64];
+            formatIPAddrAndPort(peerAddr, temp, 64);
+            _log.error("Network is unreachable to %s", temp);
+        } else 
+            _log.error("Send error %d", errno);
+    }
+}
+
 
 }
