@@ -46,6 +46,10 @@
 #include "TimerTask.h"
 
 #include "VoterClient.h"
+#include "SignalGenerator.h"
+
+#define LINE_ID_VOTER (24)
+#define LINE_ID_GENERATOR (25)
 
 using namespace std;
 using namespace kc1fsz;
@@ -72,26 +76,29 @@ int main(int argc, const char** argv) {
     threadsafequeue2<MessageCarrier> respQueue;
     MultiRouter router(respQueue);
 
-    VoterClient client0(log, clock, 1, router);
-
-    // Open up the IAX2 network connection
-    client0.setClientPassword(getenv("AMP_VOTER_CLIENT_PASSWORD"));
-    client0.setServerPassword(getenv("AMP_VOTER_SERVER_PASSWORD"));
-    int rc = client0.open(getenv("AMP_VOTER_SERVER_ADDR"));
+    // Setup link to the voter server
+    VoterClient client24(log, clock, LINE_ID_VOTER, router);
+    router.addRoute(&client24, LINE_ID_VOTER);
+    client24.setClientPassword(getenv("AMP_VOTER_CLIENT_PASSWORD"));
+    client24.setServerPassword(getenv("AMP_VOTER_SERVER_PASSWORD"));
+    int rc = client24.open(getenv("AMP_VOTER_SERVER_ADDR"));
     if (rc != 0) {
         log.error("Failed to open connection");
         std::exit(-1);
     }
 
-    // Setup a timer that takes the poke address generated from the service
-    // thread and puts it into the IAX line.
+    // Can be used in inject tones
+    SignalGenerator generator25(log, clock, LINE_ID_GENERATOR, router, LINE_ID_VOTER);
+    router.addRoute(&generator25, LINE_ID_GENERATOR);
+
+    // Can be used to generate period activity
     TimerTask timer1(log, clock, 10, 
-        [&log, &client0]() {
+        [&log, &client24]() {
         }
     );
 
     // Main loop        
-    Runnable2* tasks2[] = { &client0, &router, &timer1 };
+    Runnable2* tasks2[] = { &client24, &generator25, &router, &timer1 };
     EventLoop::run(log, clock, 0, 0, tasks2, std::size(tasks2), nullptr, false);
 
     return 0;

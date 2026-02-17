@@ -4,3 +4,6 @@
 [submodule "amp-core"]
 	path = amp-core
 	url = https://github.com/Ampersand-ASL/amp-core.git
+[submodule "itu-g711-codec"]
+	path = itu-g711-codec
+	url = https://github.com/brucemack/itu-g711-codec.git

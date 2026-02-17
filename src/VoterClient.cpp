@@ -95,33 +95,6 @@ int VoterClient::open(const char* serverAddrAndPort) {
         return -1;
     }
 
-    /*
-    struct sockaddr_storage servaddr;
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.ss_family = _addrFamily;
-    
-    if (_addrFamily == AF_INET) {
-        // Bind to all interfaces
-        // Or, specify a particular IP address: servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-        // TODO: Allow this to bec controlled
-        ((sockaddr_in&)servaddr).sin_addr.s_addr = INADDR_ANY;
-        ((sockaddr_in&)servaddr).sin_port = htons(_listenPort);
-    } else if (_addrFamily == AF_INET6) {
-        // To bind to all available IPv6 interfaces
-        // TODO: Allow this to bec controlled
-        ((sockaddr_in6&)servaddr).sin6_addr = in6addr_any; 
-        ((sockaddr_in6&)servaddr).sin6_port = htons(_listenPort);
-    } else {
-        assert(false);
-    }
-
-    if (::bind(sockFd, (const struct sockaddr*)&servaddr, sizeof(servaddr)) < 0) {
-        _log.error("Unable to bind to Voter port (%d)", errno);
-        ::close(sockFd);
-        return -1;
-    }
-    */
-
     if (makeNonBlocking(sockFd) != 0) {
         _log.error("open fcntl failed (%d)", errno);
         ::close(sockFd);
@@ -156,6 +129,10 @@ void VoterClient::setClientPassword(const char* p) {
 }
 
 void VoterClient::consume(const Message& m) {   
+    if (m.isVoice()) {
+        if (_client.isPeerTrusted()) 
+            _client.sendAudio(0xff, m.body(), m.size());
+    }
 }
 
 bool VoterClient::run2() {   

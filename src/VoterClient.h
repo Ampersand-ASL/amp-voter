@@ -31,7 +31,7 @@ namespace kc1fsz {
 class Log;
 class Clock;
 
-class VoterClient : public Runnable2 {
+class VoterClient : public Runnable2, public MessageConsumer {
 public:
 
     /**
