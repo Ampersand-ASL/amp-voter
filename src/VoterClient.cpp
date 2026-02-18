@@ -202,7 +202,7 @@ void VoterClient::_processReceivedPacket(
 void VoterClient::_sendPacketToPeer(const uint8_t* b, unsigned len, 
     const sockaddr& peerAddr) {
 
-    _log.infoDump("Sending packet", b, len);
+    //_log.infoDump("Sending packet", b, len);
 
     if (!_sockFd)
         return;

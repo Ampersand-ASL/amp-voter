@@ -42,8 +42,8 @@ void SignalGenerator::audioRateTick(uint32_t tickTimeMs) {
     for (unsigned i = 0; i < 160; i++) {
         pcm8[i] = 32767.0f * 0.5 * std::cos(_phi);
         _phi += _omega;
+        _phi = fmod(_phi, 2.0f * 3.1415926f);
     }
-    _phi = fmod(_phi, 2.0f * 3.1415926f);
 
     uint8_t ulaw[160];
     _tc.encode(pcm8, 160, ulaw, 160);
