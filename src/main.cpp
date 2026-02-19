@@ -1,24 +1,20 @@
-/*
-Building:
-
-    export PICO_SDK_FETCH_FROM_GIT=1
-    mkdir build
-    cd build
-    # Debug build:
-    cmake .. -DPICO_BOARD=pico_w -DCMAKE_BUILD_TYPE=Debug
-    make voter
-
-Flashing:
-
-    ~/git/openocd/src/openocd -s ~/git/openocd/tcl -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 5000" -c "program voter.elf verify reset exit"
-
-Serial console:
-
-    minicom -b 115200 -o -D /dev/ttyACM1
-*/
-
+/**
+ * Copyright (C) 2026, Bruce MacKinnon KC1FSZ
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 #include <stdio.h>
-#include <iostream>
 
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
@@ -46,13 +42,9 @@ Serial console:
 using namespace std;
 using namespace kc1fsz;
 
+static const char* VERSION = "20260219.0";
 const char ssid[] = "Gloucester Island Municipal WIFI";
 const char wifiPwd[] = "xxx";
-
-static void myRecv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port) {
-    printf("Got %c\n", pbuf_get_at(p, 0));
-    pbuf_free(p);
-}
 
 int main() {
     
@@ -67,13 +59,15 @@ int main() {
     gpio_put(LED_PIN, 0);
     sleep_ms(1000);
 
-    cout << "Starting ..." << endl;
-
     PicoClock2 clock;
     Log log;
 
+    log.info("KC1FSZ Ampersand VOTER");
+    log.info("Powered by the Ampersand ASL Project https://github.com/Ampersand-ASL");
+    log.info("Version %s", VERSION);
+
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
-        printf("failed to initialise\n");
+        log.error("Failed to initialize WIFI");
         return 1;
     }
 
@@ -91,35 +85,22 @@ int main() {
     // This task monitors for WIFI connect/disconnect events
     TimerTask timer1(log, clock, 5, 
         [&log, &isUp, &u]() {
-            log.info("Tick");
             if (cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_UP) {
                 if (!isUp) {
-
-                    cout << "Good" << endl;
-                    cout << ipaddr_ntoa(&cyw43_state.netif[0].ip_addr) << endl;
-                    isUp = true;
-        
-                    // Setup a UDP port
-                    u = udp_new_ip_type(IPADDR_TYPE_ANY);
-                    if (!u) {
-                        cout << "Failed to create pcb" << endl;
-                    } else {
-                        udp_bind(u, IP_ADDR_ANY, 5190);
-
-                        // Install a receive
-                        udp_recv(u, myRecv, 0);
-                    }
+                    log.info("WIFI is connected %s", 
+                        ipaddr_ntoa(&cyw43_state.netif[0].ip_addr));
+                    isUp = true;        
                 }
             }
         }
     );
 
-    // Setup link to the voter server
+    // Setup link to the VOTER server
     VoterClient client24(log, clock, LINE_ID_VOTER, router);
     router.addRoute(&client24, LINE_ID_VOTER);
+    // #### TODO REMOVE HARD-CODING
     client24.setClientPassword("client0");
     client24.setServerPassword("parrot0");
-    log.info("Opening VOTER");
     int rc = client24.open("52.8.247.112:1667");
     if (rc != 0) {
         log.error("Failed to open connection");
@@ -131,7 +112,7 @@ int main() {
 
     // Main loop        
     Runnable2* tasks2[] = { &cy34Task, &timer1, &client24, &generator25 };
-    log.info("Entering loop ...");
+    log.info("Entering event loop ...");
     PicoEventLoop::run(log, clock, 0, 0, tasks2, std::size(tasks2), nullptr, false);
 }
 
