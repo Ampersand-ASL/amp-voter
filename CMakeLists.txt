@@ -31,14 +31,18 @@ add_compile_options(-g)
 add_executable(voter
   src/main.cpp
   src/VoterClient.cpp
+  src/SignalGenerator.cpp
+  amp-core/src/Message.cpp
   amp-core/src/VoterUtil.cpp
   amp-core/src/VoterPeer.cpp
   amp-core/src/pico/PicoEventLoop.cpp
+  amp-core/src/Transcoder_G711_ULAW.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   kc1fsz-tools-cpp/src/NetUtils.cpp
   kc1fsz-tools-cpp/src/StdPollTimer.cpp
   micro-ip/impl-pico/main.c
   micro-ip/impl-pico/main2.c
+  itu-g711-codec/src/codec.cpp
 )
 
 pico_enable_stdio_usb(voter 1)
@@ -50,6 +54,7 @@ target_include_directories(voter PRIVATE amp-core/src)
 target_include_directories(voter PRIVATE amp-core/include)
 target_include_directories(voter PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(voter PRIVATE micro-ip)
+target_include_directories(voter PRIVATE itu-g711-codec/src)
 
 target_link_libraries(voter pico_cyw43_arch_lwip_poll pico_stdlib)
 

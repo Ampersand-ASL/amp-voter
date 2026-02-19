@@ -36,7 +36,7 @@ Serial console:
 #include "SimpleRouter.h"
 
 #include "VoterClient.h"
-//#include "SignalGenerator.h"
+#include "SignalGenerator.h"
 
 #define LED_PIN (25)
 
@@ -125,8 +125,12 @@ int main() {
         log.error("Failed to open connection");
     }
 
+    // Can be used in inject tones
+    SignalGenerator generator25(log, clock, LINE_ID_GENERATOR, router, LINE_ID_VOTER);
+    router.addRoute(&generator25, LINE_ID_GENERATOR);
+
     // Main loop        
-    Runnable2* tasks2[] = { &cy34Task, &timer1, &client24 };
+    Runnable2* tasks2[] = { &cy34Task, &timer1, &client24, &generator25 };
     log.info("Entering loop ...");
     PicoEventLoop::run(log, clock, 0, 0, tasks2, std::size(tasks2), nullptr, false);
 }
