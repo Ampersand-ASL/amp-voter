@@ -14,8 +14,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#ifndef PICO_BOARD
 #include <unistd.h>
 #include <fcntl.h>
+#endif
 
 #include <errno.h>
 #include <sys/socket.h>
@@ -30,11 +32,12 @@
 #include <iostream>
 #include <algorithm>
 
+#include "MessageConsumer.h"
+
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/NetUtils.h"
 #include "kc1fsz-tools/Log.h"
 
-#include "MessageConsumer.h"
 #include "Message.h"
 
 #include "VoterPeer.h"
@@ -71,10 +74,12 @@ VoterClient::VoterClient(Log& log, Clock& clock, int lineId,
 int VoterClient::open(const char* serverAddrAndPort) {
 
     close();
-
+    
     // Parse the server address and determine IPv4 vs IPv6
-    if (parseIPAddrAndPort(serverAddrAndPort, _serverAddr) != 0)
+    int rc = parseIPAddrAndPort(serverAddrAndPort, _serverAddr);
+    if (rc != 0) {
         return -1;
+    }
     _addrFamily = _serverAddr.ss_family;
 
     // UDP open/bind

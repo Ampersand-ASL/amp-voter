@@ -15,37 +15,45 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 cmake_minimum_required(VERSION 3.13)
-project(ampersand C CXX ASM)
+
+include(pico_sdk_import.cmake)
+
+project(amp-voter C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 23)
 
-# ----- Voter Simulator -----------------------------------------------------------
+pico_sdk_init()
 
-add_executable(voter-sim
-  src/sim-main.cpp
+add_compile_options(-g)
+
+# ----- voter ---------------------------------------------------------------
+
+add_executable(voter
+  src/main.cpp
   src/VoterClient.cpp
-  src/SignalGenerator.cpp
-  amp-core/src/EventLoop.cpp
   amp-core/src/VoterUtil.cpp
   amp-core/src/VoterPeer.cpp
-  amp-core/src/MultiRouter.cpp
-  amp-core/src/Message.cpp
-  amp-core/src/ThreadUtil.cpp
-  amp-core/src/Transcoder_G711_ULAW.cpp
+  amp-core/src/pico/PicoEventLoop.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   kc1fsz-tools-cpp/src/NetUtils.cpp
   kc1fsz-tools-cpp/src/StdPollTimer.cpp
-  kc1fsz-tools-cpp/src/fixed_math.cpp
-  kc1fsz-tools-cpp/src/linux/StdClock.cpp
-  kc1fsz-tools-cpp/src/linux/MTLog.cpp
-  itu-g711-codec/src/codec.cpp
+  micro-ip/impl-pico/main.c
+  micro-ip/impl-pico/main2.c
 )
-target_compile_options(voter-sim PRIVATE -Wall -Wpedantic -g -O3 -mtune=native -ffast-math)
 
-target_include_directories(voter-sim PRIVATE src)
-target_include_directories(voter-sim PRIVATE include)
-target_include_directories(voter-sim PRIVATE kc1fsz-tools-cpp/include)
-target_include_directories(voter-sim PRIVATE amp-core/include)
-target_include_directories(voter-sim PRIVATE amp-core/src)
-target_include_directories(voter-sim PRIVATE itu-g711-codec/src)
+pico_enable_stdio_usb(voter 1)
+pico_enable_stdio_uart(voter 0)
+pico_add_extra_outputs(voter)
+
+target_include_directories(voter PRIVATE src)
+target_include_directories(voter PRIVATE amp-core/src)
+target_include_directories(voter PRIVATE amp-core/include)
+target_include_directories(voter PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(voter PRIVATE micro-ip)
+
+target_link_libraries(voter pico_cyw43_arch_lwip_poll pico_stdlib)
+
+
+
+
 
