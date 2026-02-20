@@ -1,4 +1,4 @@
-A software simulation of the VOTER board.
+An implementation of the VOTER protocol targeting a Pico W (RP2040) microcontroller.
 
 [Most of the Ampersand project documentation is here](https://mackinnon.info/ampersand/).
 
